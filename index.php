@@ -28,25 +28,30 @@ for ($i = 0; $i < $lengthTest; $i++) {
   $predictions[] = $result;
 
   $actualClass = end($knn->testSet[$i]);
-  $knn->buildConfusionMatrix($actualClass, $result, $i);
+  $knn->buildIndividualConfusionMatrix($actualClass, $result, $i);
 
   print "\n$i> Predicted= ";
   print_r($result);
   print ", actual= ";
   print_r(end($knn->testSet[$i]));
 }
+$knn->buildGeneralConfusionMatrix();
 
-print "\n\nresultado tabela\n";
-print_r($knn->classificationTable);
 //die();
 
 //$accuracy = $knn->getAccuracy($predictions);
 
-print "\n\nAccuracy: ";
-print_r($accuracy);
-print "%";
+//print "\n\nAccuracy: ";
+//print_r($accuracy);
+//print "%";
 
-$knn->fillConfusionMatrix();
+$knn->fillIndividualConfusionMatrix();
+$knn->fillGeneralConfusionMatrix();
+
+print "\n\nResultado tabela Individual\n";
+print_r($knn->classificationTable);
+print "\n\nResultado tabela Geral\n";
+print_r($knn->generalClassificationTable);
 
 if (DEBUG) print "</pre>";
 
