@@ -1,76 +1,60 @@
 <?php
 
-namespace KNN\Knn;
+namespace KNN;
 /**
+ * KNN implementation
+ *
  * Created by PhpStorm.
  * User: samirsouza<samir.guitar@gmail.com>
  * Date: 19/06/17
  * Time: 22:43
  */
+/**
+ * Class Knn
+ * @package KNN
+ */
 class Knn
 {
+  // URL do Dataset usado
   public $url;
+  // Array com as instâncias de Treinamento
   public $trainingSet;
+  // Array com as instâncias de Teste
   public $testSet;
+  // Número do Balanceamento entre Teste e Treinamento
   public $splitNumber;
-  public $classificationTable;
-  public $generalClassificationTable;
+  // Número de vizinhos usado no cálculo
+  public $kNumber;
 
+  // Array com as Tabelas de Classificação individuais
+  public $classificationTable;
+  // Array com as Tabela de Classificação geral
+  public $generalClassificationTable;
+  //Quantidade de Casas decimais
   private $decimalNumberVars;
+  // Quantidade de atributos do Dataset em questão
+  public $parameterListLength;
 
   /**
-   * @return int
+   * Knn constructor.
+   * @param null $url
+   * @param null $splitNumber
+   * @param int $length
+   * @param int $kNumber
    */
-  public function getDecimalNumberVars()
-  {
-    return $this->decimalNumberVars;
-  }
-
-  public function __construct($url = null, $splitNumber = null, $length = 0)
+  public function __construct($url = null, $splitNumber = null, $length = 0, $kNumber = 3)
   {
     $this->url = $url;
     $this->splitNumber = $splitNumber;
     $this->trainingSet = [];
     $this->testSet = [];
-    $this->decimalNumberVars = 3;
-    // number of parameters
-    $this->length = $length;
+    $this->decimalNumberVars = 2;
+    $this->kNumber = $kNumber;
 
-    $this->classificationTable = [
-      "Iris-setosa" => [
-        "tp" => 0,
-        "tn" => 0,
-        "fp" => 0,
-        "fn" => 0,
-        "precision" => 0,
-        "recall" => 0,
-        "specificity" => 0,
-        "fMeasure" => 0,
-        "accuracy" => 0
-      ],
-      "Iris-versicolor" => [
-        "tp" => 0,
-        "tn" => 0,
-        "fp" => 0,
-        "fn" => 0,
-        "precision" => 0,
-        "recall" => 0,
-        "specificity" => 0,
-        "fMeasure" => 0,
-        "accuracy" => 0
-      ],
-      "Iris-virginica" => [
-        "tp" => 0,
-        "tn" => 0,
-        "fp" => 0,
-        "fn" => 0,
-        "precision" => 0,
-        "recall" => 0,
-        "specificity" => 0,
-        "fMeasure" => 0,
-        "accuracy" => 0
-      ]
-    ];
+    // number of parameters
+    $this->parameterListLength = $length;
+
+    $this->classificationTable = [];
 
     $this->generalClassificationTable = [
       "tp" => 0,
@@ -86,7 +70,7 @@ class Knn
   }
 
   /**
-   * Handle - Preparo dos dados
+   * Handle - Adequação dos dados do dataset para a estrutura do código local
    * @param null $url
    * @param null $splitNumber
    * @return string
@@ -111,15 +95,30 @@ class Knn
 
     $content = preg_split("/[\n,]+/", $content, -1, PREG_SPLIT_NO_EMPTY);
     $total = count($content);
-//    for ($j = 0, $i = 0; $i < $total; $j++, $i += 5) {
+
     for ($i = 0; $i < $total; $i++) {
       $arrayData[] = $content[$i];
 
-      if (($i + 1) % ($this->length + 1) == 0) {
-        if (rand(1, 100) < $splitNumber * 100) {
+      if (($i + 1) % ($this->parameterListLength + 1) == 0) {
+        if (rand(1, 100) < $splitNumber) {
           $this->trainingSet[] = $arrayData;
         } else {
           $this->testSet[] = $arrayData;
+        }
+
+        $actualKey = end($arrayData);
+        if (!array_key_exists($actualKey, $this->classificationTable)) {
+          $this->classificationTable[$actualKey] = [
+            "tp" => 0,
+            "tn" => 0,
+            "fp" => 0,
+            "fn" => 0,
+            "precision" => 0,
+            "recall" => 0,
+            "specificity" => 0,
+            "fMeasure" => 0,
+            "accuracy" => 0
+          ];
         }
         $arrayData = null;
       }
@@ -141,15 +140,15 @@ class Knn
   /**
    * Neighbors: localiza k instâncias de dados mais semelhantes
    */
-//  public function getNeighbors($trainigSet, $testInstance, $k)
-  public function getNeighbors($testElem, $k)
+  public function getNeighbors($testElem)
   {
     $distances = [];
-//    $length = count($this->testSet)-1;
-    $length = $this->length;
+    $length = $this->parameterListLength;
     $lengthTraining = count($this->trainingSet);
     for ($i = 0; $i < $lengthTraining; $i++) {
-      $dist = $this->euclideanDistance($this->testSet[$testElem], $this->trainingSet[$i], $length);
+      $dist = $this->euclideanDistance(
+        $this->testSet[$testElem], $this->trainingSet[$i], $length
+      );
       $distances[] = [$this->trainingSet[$i], $dist];
     }
 
@@ -158,14 +157,14 @@ class Knn
     });
 
     $neighbors = [];
-    for ($i = 0; $i < $k; $i++) {
+    for ($i = 0; $i < $this->kNumber; $i++) {
       $neighbors[] = $distances[$i][0];
     }
     return $neighbors;
   }
 
   /**
-   * Response: gera uma resposta a partir de um conjunto de instância de dados
+   * Response: gera uma resposta a partir de um conjunto de instância de dados informando o tipo
    */
   public function getResponse($neighbors)
   {
@@ -200,14 +199,21 @@ class Knn
         $strToPrint = " <<<<<<< DIFFERENCE";
       }
 
-      if (DEBUG) {
-        print "\n->>>Test: " . end($this->testSet[$i]);
-        print "\t\tPrediction: " . $predictions[$i] . $strToPrint;
-      }
+//      if (DEBUG) {
+//        print "\n->>>Test: " . end($this->testSet[$i]);
+//        print "\t\tPrediction: " . $predictions[$i] . $strToPrint;
+//      }
     }
     return ($correct / doubleval($lengthTestSet)) * 100;
   }
 
+  /**
+   * Constrói a Matriz de confusão de cada Classe
+   *
+   * @param $actualClass
+   * @param $result
+   * @param $count
+   */
   public function buildIndividualConfusionMatrix($actualClass, $result, $count)
   {
     if ($actualClass == $result) {
@@ -223,6 +229,9 @@ class Knn
     }
   }
 
+  /**
+   * Constrói a Matriz de confusão de modo geral, considerando todas as classes
+   */
   public function buildGeneralConfusionMatrix()
   {
     foreach ($this->classificationTable as $k => $v) {
@@ -233,6 +242,10 @@ class Knn
     }
   }
 
+  /**
+   * preenche as medidas de desempenho de cada classe
+   *
+   */
   public function fillIndividualConfusionMatrix()
   {
     foreach ($this->classificationTable as $k => $v) {
@@ -240,10 +253,13 @@ class Knn
       $this->classificationTable[$k]["precision"] = floatval($this->getPrecisionFinal($v["tp"], $v["fp"]));
       $this->classificationTable[$k]["recall"] = floatval($this->getSensibilityRecallFinal($v["tp"], $v["fn"]));
       $this->classificationTable[$k]["specificity"] = floatval($this->getSpecificityFinal($v["tn"], $v["fp"]));
-      $this->classificationTable[$k]["fMeasure"] = $this->getFMeasureFinal($this->classificationTable[$k]["precision"], $this->classificationTable[$k]["recall"]);
+      $this->classificationTable[$k]["fMeasure"] = floatval($this->getFMeasureFinal($this->classificationTable[$k]["precision"], $this->classificationTable[$k]["recall"]));
     }
   }
 
+  /**
+   * preenche as medidas de desempenho de modo geral
+   */
   public function fillGeneralConfusionMatrix()
   {
     $this->generalClassificationTable["accuracy"] = floatval($this->getAccuracyFinal($this->generalClassificationTable["tp"], $this->generalClassificationTable["tn"], $this->generalClassificationTable["fp"], $this->generalClassificationTable["fn"]));
@@ -253,6 +269,15 @@ class Knn
     $this->generalClassificationTable["fMeasure"] = $this->getFMeasureFinal($this->generalClassificationTable["precision"], $this->generalClassificationTable["recall"]);
   }
 
+  /**
+   * Calcula a acurácia
+   *
+   * @param $TP
+   * @param $TN
+   * @param $FP
+   * @param $FN
+   * @return string
+   */
   private function getAccuracyFinal($TP, $TN, $FP, $FN)
   {
     //Acurácia       = TP+TN/(TP+TN+FP+FN) = (120+310)/(120+310+40+30) = .86
@@ -260,6 +285,13 @@ class Knn
     return number_format($result, $this->decimalNumberVars);
   }
 
+  /**
+   * Calcula a sensibilidade
+   *
+   * @param $TP
+   * @param $FN
+   * @return string
+   */
   private function getSensibilityRecallFinal($TP, $FN)
   {
     //    Sensibilidade  = TP/(TP + FN) = 120 / (120+30) = .8
@@ -267,6 +299,13 @@ class Knn
     return number_format($result, $this->decimalNumberVars);
   }
 
+  /**
+   * Calcula a precisão
+   *
+   * @param $TP
+   * @param $FP
+   * @return string
+   */
   private function getPrecisionFinal($TP, $FP)
   {
     //    Precisão       = TP/(TP + FP) = 120 / (120+40) = .75
@@ -274,6 +313,13 @@ class Knn
     return number_format($result, $this->decimalNumberVars);
   }
 
+  /**
+   * Calcula a especificidade
+   *
+   * @param $TN
+   * @param $FP
+   * @return string
+   */
   private function getSpecificityFinal($TN, $FP)
   {
     //Especificidade = TN/(TN + FP) = 310 / (310+40) = .88
@@ -281,6 +327,13 @@ class Knn
     return number_format($result, $this->decimalNumberVars);
   }
 
+  /**
+   * Calcula a Medida-F
+   *
+   * @param $Precision
+   * @param $Recall
+   * @return string
+   */
   private function getFMeasureFinal($Precision, $Recall)
   {
     //Medida - F     = 2 *(Precisão X Recall) / (Precisão+Recall)
@@ -289,11 +342,12 @@ class Knn
     return number_format($result, $this->decimalNumberVars);
   }
 
-//  public function confusionMatrix(){
-//    $precision = '';    // precisão
-//    $recall = '';       // sensibilidade
-//    $specificity = '';  // especificidade
-//    $accuracy = '';     // acurácia
-//    $fMeasure= '';      // medida-F
-//  }
+  /**
+   * @return int
+   */
+  public function getDecimalNumberVars()
+  {
+    return $this->decimalNumberVars;
+  }
+
 }

@@ -1,5 +1,5 @@
 <?php
-use KNN\Knn\Knn;
+use KNN\Knn;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -32,16 +32,14 @@ class KnnTest extends TestCase
   public function testEuclideanDistance(Knn $knn)
   {
     $result = $knn->euclideanDistance(
-      $knn->trainingSet[0], $knn->trainingSet[1], $knn->length);
-//    $this->assertEquals(3.4641016151378,$result);
-    $this->assertEquals(4,$result);
-//    3,4641
+      $knn->trainingSet[0], $knn->trainingSet[1], $knn->parameterListLength);
+    $this->assertEquals(4, $result);
   }
 
   public function euclideanDistanceProvider()
   {
     $knn = new Knn(null, null, 4);
-    $knn->trainingSet = [ [2, 2, 2, 2, "a"],[4, 4, 4, 4, "b"] ];
+    $knn->trainingSet = [[2, 2, 2, 2, "a"], [4, 4, 4, 4, "b"]];
     return [[$knn]];
   }
 
@@ -50,18 +48,17 @@ class KnnTest extends TestCase
    */
   public function testGetNeighbors(Knn $knn)
   {
-    $ideal[] = [4,4,4,4,"b"];
+    $ideal = [[4, 4, 4, 4, "b"], [4, 4, 4, 4, "b"], [2, 2, 2, 2, "a"],];
 
-    $k = 3;
-    $result = $knn->getNeighbors($k);
-    $this->assertEquals($ideal , $result );
+    $result = $knn->getNeighbors(0);
+    $this->assertEquals($ideal, $result);
   }
 
   public function neighborsProvider()
   {
-    $knn = new Knn(null, null, 4);
-    $knn->trainingSet = [ [2, 2, 2, 2, "a"],[4, 4, 4, 4, "b"] ];
-    $knn->testSet = [[5, 5, 5, 5]];
+    $knn = new Knn(null, null, 4, 3);
+    $knn->trainingSet = [[2, 2, 2, 2, "a"], [4, 4, 4, 4, "b"], [4, 4, 4, 4, "b"]];
+    $knn->testSet = [[5, 5, 5, 5, "b"]];
     return [[$knn]];
   }
 
@@ -72,13 +69,13 @@ class KnnTest extends TestCase
   {
     $result = $knn->getResponse($neighbors);
 
-    $this->assertEquals(2 , $result );
+    $this->assertEquals('a', $result);
   }
 
   public function responseProvider()
   {
     $knn = new Knn();
-    $neighbors = [ [1, 1, 1,"a"],[2, 2, 2, "a"],[3, 3, 3, "b"] ];
+    $neighbors = [[1, 1, 1, "a"], [2, 2, 2, "a"], [3, 3, 3, "b"]];
     return [[$knn, $neighbors]];
   }
 
@@ -88,15 +85,14 @@ class KnnTest extends TestCase
   public function testAccuracy(Knn $knn, $predictions)
   {
     $result = $knn->getAccuracy($predictions);
-    print $result;
-    $this->assertEquals(66 , intval($result) );
+    $this->assertEquals(66, intval($result));
   }
 
   public function accuracyProvider()
   {
-    $testSet = [ [1, 1, 1, 1, "a"],[2, 2, 2, 2, "a"],[3, 3, 3, 3, "b"] ];
-    $predictions = ["a","a","a","a"];
-    $knn = new Knn(null,null,4);
+    $testSet = [[1, 1, 1, 1, "a"], [2, 2, 2, 2, "a"], [3, 3, 3, 3, "b"]];
+    $predictions = ["a", "a", "a", "a"];
+    $knn = new Knn(null, null, 4);
     $knn->testSet = $testSet;
     return [[$knn, $predictions]];
   }
@@ -104,112 +100,119 @@ class KnnTest extends TestCase
   /**
    * @dataProvider knnMetricsProvider
    */
-  public function testGetAccuracyFinal(Knn $knn){
+  public function testGetAccuracyFinal(Knn $knn)
+  {
 //    TP+TN/(TP+TN+FP+FN) = (120+310)/(120+310+40+30) = .86
     $workingWell = true;
     $listValues = [
-      "Iris-setosa"    =>1,
-      "Iris-versicolor"=>0.92727272727273,
-      "Iris-virginica" =>0.92727272727273
+      "Iris-setosa" => 1,
+      "Iris-versicolor" => 0.92727272727273,
+      "Iris-virginica" => 0.92727272727273
     ];
 
     $knn->fillIndividualConfusionMatrix();
-    foreach ($knn->classificationTable as $k => $v){
-      if( $v["accuracy"] !=
-        number_format($listValues[$k],$knn->getDecimalNumberVars()) ){
+    foreach ($knn->classificationTable as $k => $v) {
+      if ($v["accuracy"] !=
+        number_format($listValues[$k], $knn->getDecimalNumberVars())
+      ) {
         $workingWell = false;
       }
     }
-    $this->assertEquals(true ,$workingWell);
+    $this->assertEquals(true, $workingWell);
   }
 
   /**
    * @dataProvider knnMetricsProvider
    */
-  public function testGetPrecisionFinal(Knn $knn){
+  public function testGetPrecisionFinal(Knn $knn)
+  {
 //    Precisão       = TP/(TP + FP) = 120 / (120+40) = .75
     $workingWell = true;
     $listValues = [
-      "Iris-setosa"    => 1,
-      "Iris-versicolor"=> 0.916666666666667,
+      "Iris-setosa" => 1,
+      "Iris-versicolor" => 0.916666666666667,
       "Iris-virginica" => 0.882352941176471
     ];
 
     $knn->fillIndividualConfusionMatrix();
-    foreach ($knn->classificationTable as $k => $v){
-      if( $v["precision"] != number_format($listValues[$k],$knn->getDecimalNumberVars()) ){
+    foreach ($knn->classificationTable as $k => $v) {
+      if ($v["precision"] != number_format($listValues[$k], $knn->getDecimalNumberVars())) {
         $workingWell = false;
       }
     }
-    $this->assertEquals(true ,$workingWell);
+    $this->assertEquals(true, $workingWell);
   }
 
   /**
    * @dataProvider knnMetricsProvider
    */
-  public function testGetSensibilityRecallFinal(Knn $knn){
+  public function testGetSensibilityRecallFinal(Knn $knn)
+  {
 //    Precisão       = TP/(TP + FP) = 120 / (120+40) = .75
     $workingWell = true;
     $listValues = [
-      "Iris-setosa"    => 1,
-      "Iris-versicolor"=> 0.917,
+      "Iris-setosa" => 1,
+      "Iris-versicolor" => 0.917,
       "Iris-virginica" => 0.882
     ];
 
     $knn->fillIndividualConfusionMatrix();
-    foreach ($knn->classificationTable as $k => $v){
-      if( $v["recall"] != number_format($listValues[$k],$knn->getDecimalNumberVars()) ){
+    foreach ($knn->classificationTable as $k => $v) {
+      if ($v["recall"] != number_format($listValues[$k], $knn->getDecimalNumberVars())) {
         $workingWell = false;
       }
     }
-    $this->assertEquals(true ,$workingWell);
+    $this->assertEquals(true, $workingWell);
   }
 
   /**
    * @dataProvider knnMetricsProvider
    */
-  public function testGetSpecificityFinal(Knn $knn){
+  public function testGetSpecificityFinal(Knn $knn)
+  {
 //    Precisão       = TP/(TP + FP) = 120 / (120+40) = .75
     $workingWell = true;
     $listValues = [
-      "Iris-setosa"    => 1,
-      "Iris-versicolor"=> 0.935,
+      "Iris-setosa" => 1,
+      "Iris-versicolor" => 0.935,
       "Iris-virginica" => 0.947
     ];
 
     $knn->fillIndividualConfusionMatrix();
-    foreach ($knn->classificationTable as $k => $v){
-      if( $v["specificity"] != number_format($listValues[$k],$knn->getDecimalNumberVars()) ){
+    foreach ($knn->classificationTable as $k => $v) {
+      if ($v["specificity"] != number_format($listValues[$k], $knn->getDecimalNumberVars())) {
         $workingWell = false;
       }
     }
-    $this->assertEquals(true ,$workingWell);
+    $this->assertEquals(true, $workingWell);
   }
 
   /**
    * @dataProvider knnMetricsProvider
    */
-  public function testGetFMEasureFinal(Knn $knn){
+  public function testGetFMEasureFinal(Knn $knn)
+  {
     //Medida - F     = 2 *(Precisão X Recall) / (Precisão+Recall)
     //      = 2 * .75 * .8 / (.75 + .8) = .77
     $workingWell = true;
     $listValues = [
-      "Iris-setosa"    => 1,
-      "Iris-versicolor"=> 0.917,
+      "Iris-setosa" => 1,
+      "Iris-versicolor" => 0.917,
       "Iris-virginica" => 0.882
     ];
 
     $knn->fillIndividualConfusionMatrix();
-    foreach ($knn->classificationTable as $k => $v){
-      if( $v["fMeasure"] != number_format($listValues[$k],$knn->getDecimalNumberVars()) ){
+    foreach ($knn->classificationTable as $k => $v) {
+      if ($v["fMeasure"] != number_format($listValues[$k], $knn->getDecimalNumberVars())) {
         $workingWell = false;
       }
     }
-    $this->assertEquals(true ,$workingWell);
+    $this->assertEquals(true, $workingWell);
   }
 
-  public function knnMetricsProvider(){
-    $knn = new Knn(null,null,null);
+  public function knnMetricsProvider()
+  {
+    $knn = new Knn(null, null, null);
 
     $knn->classificationTable["Iris-setosa"]["tp"] = doubleval(14);
     $knn->classificationTable["Iris-setosa"]["tn"] = doubleval(37);
